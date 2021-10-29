@@ -1,0 +1,152 @@
+---
+title: "a3-task3-task4-cje"
+author: "Chance English"
+date: "10/29/2021"
+output: html_document
+---
+
+
+```{r setup, include=FALSE, warning = F, message = F}
+knitr::opts_chunk$set(echo = TRUE, message = F, warning = F)
+
+
+library(tidyverse)
+library(ggplot2)
+library(lubridate)
+library(janitor)
+library(here)
+library(kableExtra)
+```
+
+
+## Load SB Coast Urchin Data
+
+```{r}
+
+urchins <- read_csv(here("data", "urchins.csv")) %>% 
+  clean_names() 
+
+```
+
+
+### Task 3 Part 1
+
+#### Size Distribution: Red & Purple Urchins
+
+```{r}
+
+urchins %>% 
+  ggplot(aes(x = size)) +
+  geom_histogram(aes(fill = common_name),bins = 12, color = "black") +
+  facet_wrap(.~common_name) +
+  scale_fill_manual(values = c("purple", "red")) +
+  labs(y = "Count",
+       x = "Size (cm)",
+       caption = "Data Source: Santa Barbara Coastal LTER and D. Reed. 2020.\nSBC LTER: Reef: Long-term experiment: Kelp removal:\nUrchin size frequency distribution ver 20.\nEnvironmental Data Initiative. https://doi.org/10.6073/pasta/5a1e9ef03aa47bd2225c0bb98a02a63b\n(Accessed 2021-10-29).") +
+  theme(legend.position = "none",
+        panel.grid.major = element_line(color = "grey", size = 0.25),
+        panel.background = element_rect(fill = "white", color = "black"),
+        strip.background = element_rect(fill = "white", color = "black"),
+        strip.text = element_text(size = 12),
+        axis.text = element_text(size = 10),
+        axis.title = element_text(size = 12),
+        plot.caption = element_text(hjust = 0)) +
+  scale_y_continuous(expand = c(0,0)) +
+  scale_x_continuous(expand = c(0,0)) 
+  
+
+```
+
+#### SB Coast Urchin Summary Statistics: Red and Purple Urchins
+
+
+```{r}
+
+urchin_common_name_sum <- urchins %>% 
+  group_by(common_name) %>%    
+  summarize(mean_size = round(mean(size),2),
+            median_size = round(median(size),2),
+            sd_size = round(sd(size),2),
+            sample_size = n())
+
+
+urchin_common_name_sum %>% 
+  kbl(caption = "Santa Barbara LTER Red and Purple Sea Urchin Sizes",col.names = c("Species", "Mean (cm)", "Median (cm)", "SD (cm)", "n")) %>% kable_classic(full_width = F) %>% 
+  kable_styling(font_size = 12) %>% 
+  footnote( general = "Data Source: Santa Barbara Coastal LTER and D. Reed. 2020.\nSBC LTER: Reef: Long-term experiment:\nKelp removal: Urchin size frequency distribution ver 20.\nEnvironmental Data Initiative. https://doi.org/10.6073/pasta/5a1e9ef03aa47bd2225c0bb98a02a63b\n(Accessed 2021-10-29).")
+  
+
+
+```
+
+
+#### Conclusions 
+
+Size distributions of red and purple sea urchins in the Santa Barbara coastal waters show an approximately normal distribution (mean ~ median). Red urchins are larger than purple urchins with (mean $\pm$ SD) sizes of of $\pm$ 1.89 and 4.47 $\pm$ 1.18, respectively. 
+
+
+
+### Task 3 Part 2
+
+
+#### Subset Urchin Size Distributions by Purple Urchins & Organize Year and Site Name
+
+```{r}
+
+purple_urchins <- urchins %>% 
+  filter(common_name == "Purple Urchin") %>% 
+  mutate(date = mdy(date),
+         year = year(date),
+         site_full = case_when(
+           site == "NAPL" ~ "Naples Reef",
+           site == "AQUE" ~ "Arroyo Quemado Reef",
+           site == "CARP" ~ "Carpinteria Reef",
+           site == "MOHK" ~ "Mohawk Reef",
+           site == "IVEE" ~ "Isla Vista Reef"
+         ))
+
+
+```
+
+
+#### Total P. Urchin counts by site & year
+
+```{r}
+
+total_p_urch_site_year <- purple_urchins %>% 
+  group_by(site_full, year) %>% 
+  count(year)
+
+```
+
+
+
+#### Visualize P. Urchin Counts Over Time at each Site 
+
+```{r}
+
+total_p_urch_site_year %>% 
+  ggplot(aes(x = year, y = n)) + 
+  geom_col(aes(fill = site_full), color = "black") +
+  facet_wrap(.~site_full) +
+  labs(x = "Year",
+       y = "Number of Purple Urchins",
+       caption = "Purple Sea Urchin Abundance at 5 Santa Barbara Coastal LTER Sites (2008-2020)\nData Source: Santa Barbara Coastal LTER and D. Reed. 2020.\nSBC LTER: Reef: Long-term experiment: Kelp removal: Urchin size frequency distribution\nver 20. Environmental Data Initiative.\nhttps://doi.org/10.6073/pasta/5a1e9ef03aa47bd2225c0bb98a02a63b (Accessed 2021-10-29)." ) +
+  theme(legend.position = "none",
+        panel.grid.major = element_line(color = "grey", size = 0.25),
+        panel.background = element_rect(fill = "white", color = "black"),
+        strip.background = element_rect(fill = "white", color = "black"),
+        strip.text = element_text(size = 12),
+        axis.text = element_text(size = 10),
+        axis.title = element_text(size = 12),
+        plot.caption = element_text(hjust = 0),
+        panel.spacing = unit(2,"lines")) +
+  scale_y_continuous(expand = c(0,0)) +
+  scale_x_continuous(expand = c(0,0), breaks = c(2008, 2012, 2016, 2020)) 
+
+```
+
+
+#### Conclusions
+
+Following a large increase in purple sea urchins from 2008-2009 at all sites (excluding Isla Vista Reef which did not record data until 2012), the populations demonstrate a general decline until 2020 where populations returned to near-2008 values. However, this data is from a long term Kelp removal project so we would need to consider only the abundances of purple sea urchins which are from the control area within each site. 
